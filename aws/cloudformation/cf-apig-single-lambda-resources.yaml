@@ -28,6 +28,11 @@ Parameters:
     Description: A custom header X-From-CDN with val below be passed to your orgin, to verify request came 
     Type: String
 
+  NestedStacksS3Bucket:
+    Description: The name of the versioned S3 bucket you created to hold nested stack temlpates
+    Type: String
+    Default: aws-blueprint.yourdomain.com
+
 Conditions: 
   CreateStagingResources: !Equals [ !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], prod ]
 
@@ -70,7 +75,7 @@ Resources:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
       TemplateURL: !Sub 
-        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
         - { url: !FindInMap [NestedStacks, infrastructure, singleLambdaProxyWithCORS] }
       Parameters:
         Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]
@@ -83,7 +88,7 @@ Resources:
     Condition: CreateStagingResources
     Properties:
       TemplateURL: !Sub 
-        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
         - { url: !FindInMap [NestedStacks, infrastructure, singleLambdaProxyWithCORS] }
       Parameters:
         Stage: staging
@@ -98,7 +103,7 @@ Resources:
     DependsOn: ApiGatewayLambdaProxy
     Properties:
       TemplateURL: !Sub 
-        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
         - { url: !FindInMap [NestedStacks, infrastructure, singleApigCustomDomain] }
 
       Parameters:
@@ -115,7 +120,7 @@ Resources:
     DependsOn: ApiGatewayLambdaProxyStaging
     Properties:
       TemplateURL: !Sub 
-        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
         - { url: !FindInMap [NestedStacks, infrastructure, singleApigCustomDomain] }
 
       Parameters:

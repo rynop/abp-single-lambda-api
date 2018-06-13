@@ -14,7 +14,9 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 ## Setup
 
 1. Checkout the branch for your favorite programming language, copy contents of this repo to your own repo.
-1. Create your "resources" (s3 buckets, dynamo tables etc) via the [Resources CloudFormation file](./aws/cloudformation/cf-apig-single-lambda-resources.yaml). Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`.  Create a stack for your `test` and `production` stages.  You should have 2 root stacks.  The `prod` stack takes care of both `prod` and `staging` resources.  Take note of the `Outputs` tab in the CloudFormation UI of each root stack.  
+1. Create your "resources" (CloudFront, API Gateway etc) via the [Resources CloudFormation file](./aws/cloudformation/cf-apig-single-lambda-resources.yaml). Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
+    *  Create a stack for your `test` and `production` stages.  You should have 2 root stacks.  
+    *  The `prod` stack takes care of both `prod` and `staging` resources.  Take note of the `Outputs` tab in the CloudFormation UI of each root stack.  
 1. Some of the Lambda configuration is stored in [Systems manager parameter store](https://console.aws.amazon.com/systems-manager/parameters) with the convention based prefix `/<stage>/<repoName>/<branch>/<lambdaName>/`.  Ex: `aws ssm put-parameter --name "/prod/abp-single-lambda-api/master/ResizeImage/lambdaExecutionRoleArn" --type "String" --value 'arn:aws:iam::accountId:role/roleName'`.  These keys are required **per** stage:
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaExecutionRoleArn` (don't create for `staging` stage.  `staging` uses the `prod` `lambdaExecutionRoleArn`).  The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetLambdaExecutionRoleCmd` value that is an aws CLI command that sets this for you.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaTimeout`
@@ -24,10 +26,13 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
     * The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetXFromCdnEnvVarCmd` value that is an aws ssm command that can be run on your CLI to set the `X_FROM_CDN` env var (used by the example code).
     * The following env vars will automatically be set in the lambda configuration: `APP_STAGE`
 1.  Create a Github user (acct will just be used to read repos for CI/CD), give it read auth to your github repo.  Create a personal access token for this user at https://github.com/settings/tokens.  This token will be used by the CI/CD to pull code.    
-1.  Create a CloudFormation stack for your CI/CD using [single-lambda-test-staging-prod.yaml](https://github.com/rynop/aws-blueprint/pipelines/cicd/single-lambda-test-staging-prod.yaml) with the stack naming convention of `[repo]--[branch]--[eyecatcher]--cicd`.  Ex: `prod--abp-single-lambda-api--master--ResizeImage--cicd`.  Look at the `README.md` of the language branch you copied for parameter values.
+1.  Go through the `README.md` of the **language branch** you copied, language specific setup and for stack parameter values that will be used in CI/CD stack creation (next step).
+1.  Create a CloudFormation stack for your CI/CD using [single-lambda-test-staging-prod.yaml](https://github.com/rynop/aws-blueprint/pipelines/cicd/single-lambda-test-staging-prod.yaml) with the stack naming convention of `[repo]--[branch]--[eyecatcher]--cicd`.  Ex: `prod--abp-single-lambda-api--master--ResizeImage--cicd`.  
 1.  Commit your code and the CI/CD CodePipline will automatically run.
 
-## The Lambda publishing process
+## Backup (if you care about inner workings)
+
+### The Lambda publishing process
 
 The publishing process is multi-stage, with manual approvals, all handled in an automated fashion.  Here are the details:
 
