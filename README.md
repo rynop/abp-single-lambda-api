@@ -14,8 +14,13 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 ## Setup
 
 1. Download the branch of this repo for your favorite programming language, extract to your own github repo. Ex: `wget -qO- https://github.com/rynop/abp-single-lambda-api/archive/golang.zip | bsdtar -xvf-`
-1. Copy the [aws](./aws) dir out of `master` to the root of your repo.  Run this from your repo root: `wget -qO- https://github.com/rynop/abp-single-lambda-api/archive/master.zip | bsdtar -xvf-; mv ./abp-single-lambda-api-master/aws .; rm -r abp-single-lambda-api-master`
-1. Set the `nested-stacks` s3 version in your resources CloudFormation (`aws/cloudformation/cf-apig-single-lambda-resources.yaml`).  From your project root run:
+1. Copy the [aws](./aws) dir out of `master` to the root of your repo.  Run this from your repo root: `
+    ```
+    wget -qO- https://github.com/rynop/abp-single-lambda-api/archive/master.zip | bsdtar -xvf-
+    mv ./abp-single-lambda-api-master/aws .
+    rm -r abp-single-lambda-api-master`
+    ```
+1. Set the `nested-stacks` s3 version in your resources CloudFormation (`aws/cloudformation/cf-apig-single-lambda-resources.yaml`).  From your project root run (replace `aws-blueprint.yourdomain.com`):
     ```
     S3VER=$(aws s3api list-object-versions --bucket aws-blueprint.yourdomain.com --prefix nested-stacks/apig/single-lambda-proxy-with-CORS.yaml | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
 
@@ -41,7 +46,7 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 1.  Create a CloudFormation stack for your CI/CD using [single-lambda-test-staging-prod.yaml](https://github.com/rynop/aws-blueprint/pipelines/cicd/single-lambda-test-staging-prod.yaml) with the stack naming convention of `[repo]--[branch]--[eyecatcher]--cicd`.  Ex: `prod--abp-single-lambda-api--master--ResizeImage--cicd`.  
 1.  Commit your code and the CI/CD CodePipline will automatically run.
 
-## Backup (if you care about inner workings)
+## Backup info (if you care about inner workings)
 
 ### The Lambda publishing process
 
