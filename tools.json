@@ -1,0 +1,17 @@
+{
+  "Tools": [
+    {
+      "Repository": "github.com/golang/dep/cmd/dep",
+      "Commit": "1550da37d8fab9ed2dbc4bd04290e6c8dd3ff04a"
+    },
+    {
+      "Repository": "github.com/golang/protobuf/protoc-gen-go",
+      "Commit": "5831880292e721c76b58a16ecc60adc27d8e6355"
+    },
+    {
+      "Repository": "github.com/twitchtv/twirp/protoc-gen-twirp",
+      "Commit": "82aa6b436c9e3fa1a817499bc5eceb45e6ef2bc0"
+    }
+  ],
+  "RetoolVersion": "1.3.6"
+}
