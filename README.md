@@ -14,6 +14,7 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 ## Setup
 
 1. Checkout the branch for your favorite programming language, copy contents of this repo to your own repo.
+1. Copy the [aws](./aws) dir out of `master` to the root of your repo: `wget -qO- https://github.com/rynop/abp-single-lambda-api/archive/master.zip | bsdtar -xvf-; mv ./abp-single-lambda-api-master/aws .; rm -r abp-single-lambda-api-master`
 1. Create your "resources" (CloudFront, API Gateway etc) via the [Resources CloudFormation file](./aws/cloudformation/cf-apig-single-lambda-resources.yaml). Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
     *  Create a stack for your `test` and `production` stages.  You should have 2 root stacks.  
     *  The `prod` stack takes care of both `prod` and `staging` resources.  Take note of the `Outputs` tab in the CloudFormation UI of each root stack.  

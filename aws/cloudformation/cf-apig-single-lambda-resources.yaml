@@ -39,8 +39,8 @@ Conditions:
 Mappings: 
   NestedStacks: 
     infrastructure: 
-      "singleLambdaProxyWithCORS": "apig/single-lambda-proxy-with-CORS.yaml?versionid=2TRsLsMV9hh7kX_xnMU1IG1rrBszpQhM"
-      "singleApigCustomDomain": "cloudfront/single-apig-custom-domain.yaml?versionid=e.wlU036Jk60Eq77XyrL8P643bL7Izay"    
+      "singleLambdaProxyWithCORS": "apig/single-lambda-proxy-with-CORS.yaml?versionid=YourS3VersionId"
+      "singleApigCustomDomain": "cloudfront/single-apig-custom-domain.yaml?versionid=YourS3VersionId"    
       
 Resources:  
 ##### Lambda
