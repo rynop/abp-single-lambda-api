@@ -1,0 +1,61 @@
+#Have to re-upload code at each stage, because you can not have multiple inputs to a CodeBuild step - cant get repo code (build.yaml) AND s3 object version
+#Instead we are going to make sure the CodeSha256 matches
+
+#LAMBDA_NAME here is NOT the full lambda name, its the last part of: ${Repo}--${Branch}--${LambdaName}
+#Lambda execution role: /[stage]/[repo]/[branch]/[LAMBDA_NAME]/lambdaExecutionRoleArn
+#Lambda env vars (optional): /[stage]/[repo]/[branch]/[LAMBDA_NAME]/lambdaEnvs/key1
+
+version: 0.2
+env:
+  variables:    
+    PKG_ZIP_NAME: "pkg.zip"
+  #parameter-store does not support dynamic key values: https://stackoverflow.com/questions/50451090/how-to-use-dynamic-key-for-parameter-store-in-aws-codebuild-spec-file
+
+phases:
+  install:
+    commands:      
+      - env
+      - apt-get update -y && apt-get install -y jq python3-dev
+      - pip install --upgrade awscli
+  pre_build:
+    commands: 
+      # Get lambda runtime config from AWS Systems Manager Parameter Store.  If staging, use prod ARN
+      - arnStage=$(if test "$STAGE" = 'staging' ; then echo 'prod' ; else echo "$STAGE" ; fi)      
+      - LAMBDA_EXECUTION_ROLE_ARN=`aws ssm get-parameter --with-decryption --name /${arnStage}/${REPO}/${BRANCH}/${LAMBDA_NAME}/lambdaExecutionRoleArn | jq -r '.Parameter.Value'`
+      - if [ -z "$LAMBDA_EXECUTION_ROLE_ARN" ]; then echo "ERROR:need to set lambdaExecutionRoleArn in aws ssm"; exit 2; fi
+      - LAMBDA_TIMEOUT=`aws ssm get-parameter --with-decryption --name /${arnStage}/${REPO}/${BRANCH}/${LAMBDA_NAME}/lambdaTimeout | jq -r '.Parameter.Value'`
+      - if [ -z "$LAMBDA_TIMEOUT" ]; then echo "ERROR:need to set lambdaTimeout in aws ssm"; exit 2; fi
+      - LAMBDA_MEMORY=`aws ssm get-parameter --with-decryption --name /${arnStage}/${REPO}/${BRANCH}/${LAMBDA_NAME}/lambdaMemory | jq -r '.Parameter.Value'`
+      - if [ -z "$LAMBDA_MEMORY" ]; then echo "ERROR:need to set lambdaMemory in aws ssm"; exit 2; fi      
+      - HANDLER="${HANDLER_PATH}"
+      # Create lambda if it does not exist
+      - stageRepoBranchEyecatcherSsmPrefix="/${STAGE}/${REPO}/${BRANCH}/${LAMBDA_NAME}"
+      - JSON_FMT='{"S3Bucket":"%s","S3Key":"%s/%s"}'
+      - codeJson=`printf "$JSON_FMT" "$S3_BUCKET_CONTAINING_PACKAGES" "$S3_PATH_TO_PACKAGES" "$PKG_ZIP_NAME"`
+      - echo "aws lambda get-function-configuration --function-name ${FULL_LAMBDA_NAME} 2>/dev/null || aws lambda create-function --function-name ${FULL_LAMBDA_NAME} --runtime ${LAMBDA_RUNTIME} --role ${LAMBDA_EXECUTION_ROLE_ARN} --handler ${HANDLER} --code ${codeJson}"
+      - lambdaConfigJson=`aws lambda get-function-configuration --function-name ${FULL_LAMBDA_NAME} 2>/dev/null || aws lambda create-function --function-name ${FULL_LAMBDA_NAME} --runtime ${LAMBDA_RUNTIME} --role ${LAMBDA_EXECUTION_ROLE_ARN} --handler ${HANDLER} --code ${codeJson}`
+  build:
+    commands: # Set env vars, role, handler, description, timeout, mem, runtime
+      # Get env vars from AWS Systems Manager Parameter Store, transform into env format for Lambda
+      - lambdaEnv=`aws ssm get-parameters-by-path --with-decryption --recursive --path ${stageRepoBranchEyecatcherSsmPrefix}/lambdaEnvs | jq --compact-output '.Parameters | map( {(.Name):.Value} ) | add | if . == null then {"Variables":{}} else {"Variables":.} end | .Variables.APP_STAGE="'$STAGE'"' | sed "s|${stageRepoBranchEyecatcherSsmPrefix}/lambdaEnvs/||g"`      
+      - updateConfigJson=`aws lambda update-function-configuration --function-name ${FULL_LAMBDA_NAME} --role ${LAMBDA_EXECUTION_ROLE_ARN} --handler ${HANDLER} --description "${LAMBDA_DESC}" --timeout ${LAMBDA_TIMEOUT} --memory-size ${LAMBDA_MEMORY} --environment "${lambdaEnv}" --runtime ${LAMBDA_RUNTIME}`
+      - echo "Lambda Config \n$lambdaConfigJson"
+      - revisionId=`echo $updateConfigJson | jq -r '.RevisionId'`
+      - echo "RevisionId ${revisionId}"
+      # If prod, the zip name is the CodeSha256 of current staging Lambda.  Else it is just PKG_ZIP_NAME
+      - zipName=$(if test "$STAGE" = 'prod' ; then aws lambda get-function-configuration --function-name ${FULL_LAMBDA_NAME} --qualifier "staging" | jq -r '.CodeSha256' | awk '{print $1".zip"}' ; else echo "$PKG_ZIP_NAME" ; fi)
+      # Upload zip and create new version, making sure the prev update config revison is used.  If prod, use the zip uploaded in staging (<staging CodeSha256>.zip)
+      - echo "Updating code with ${S3_PATH_TO_PACKAGES}/${zipName}"
+      - echo "running aws lambda update-function-code --revision-id "$revisionId" --function-name ${FULL_LAMBDA_NAME} --s3-bucket "$S3_BUCKET_CONTAINING_PACKAGES" --s3-key ${S3_PATH_TO_PACKAGES}/${zipName} --publish"
+      - updateCodeJson=`aws lambda update-function-code --revision-id "$revisionId" --function-name ${FULL_LAMBDA_NAME} --s3-bucket "$S3_BUCKET_CONTAINING_PACKAGES" --s3-key "${S3_PATH_TO_PACKAGES}/${zipName}" --publish`
+      - publishedVer=`echo $updateCodeJson | jq -r '.Version'`
+      - codeSha256=`echo $updateCodeJson | jq -r '.CodeSha256'`
+      - echo "Update Code Respose \n$updateCodeJson"
+      - echo "Published version ${publishedVer}"
+      # If staging, modify the zip name to be the CodeSha256 value, so that prod can use it (gurantee same bits).  We can't use the staging lambda version, cuz we need to support new env vars for staging
+      - if test "$STAGE" = 'staging' ; then aws s3 --region "${AWS_REGION}" cp "s3://${S3_BUCKET_CONTAINING_PACKAGES}/${S3_PATH_TO_PACKAGES}/${PKG_ZIP_NAME}" "s3://${S3_BUCKET_CONTAINING_PACKAGES}/${S3_PATH_TO_PACKAGES}/${codeSha256}.zip"; fi
+      # Create/update the alias to point to the new version      
+      - echo "Running aws lambda create-alias --function-name ${FULL_LAMBDA_NAME} --name $STAGE --function-version $publishedVer --description ${STAGE} stage 2>/dev/null || aws lambda update-alias --function-name ${FULL_LAMBDA_NAME} --name $STAGE --function-version $publishedVer"
+      - aws lambda create-alias --function-name "${FULL_LAMBDA_NAME}" --name $STAGE --function-version $publishedVer --description "${STAGE} stage" 2>/dev/null || aws lambda update-alias --function-name ${FULL_LAMBDA_NAME} --name $STAGE --function-version $publishedVer
+      # Give APIG permission to call the lambda
+      - aws lambda add-permission --qualifier $STAGE --function-name "${FULL_LAMBDA_NAME}" --statement-id apigInvoke --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:${AWS_REGION}:${AWS_ACCOUNT_ID}:*" 2>/dev/null || echo 'apigInvoke policy already added'

@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: CloudFront > APIG > Single Labmda.  
+  Naming convention, [stage]--[repo]--[branch]--[eyecatcher]--r
+  SSL only, custom DomainName, custom header to verify requests come through CloudFront, Edge Gzip, Caching OPTIONS
+
+Parameters:
+
+  AcmCertificateArn:
+    Description: The ARN of a certificate from AWS Certificate Manager (ACM)
+    Type: String
+
+  LambdaName:
+    Description: Lambda function name (should not exist when creating test, will when creating production/staging).  This value will be prepended with [Repo]--[Branch]--
+    Type: String
+
+  Route53HostedZoneId:
+    Description: Hosted Zone ID where domain name for CloudFront will be made
+    Type: String
+    Default: Z2FDTNDATAQYW2
+
+  CloudFrontCname:
+    Description: Custom domain name to use (foo.yourdomain.com).  Will prefix this with stageName--
+    Type: String
+    Default: blah.yourdomain.com
+
+  VerifyFromCfHeaderVal:
+    Description: A custom header X-From-CDN with val below be passed to your orgin, to verify request came 
+    Type: String
+
+Conditions: 
+  CreateStagingResources: !Equals [ !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], prod ]
+
+Mappings: 
+  NestedStacks: 
+    infrastructure: 
+      "singleLambdaProxyWithCORS": "apig/single-lambda-proxy-with-CORS.yaml?versionid=2TRsLsMV9hh7kX_xnMU1IG1rrBszpQhM"
+      "singleApigCustomDomain": "cloudfront/single-apig-custom-domain.yaml?versionid=e.wlU036Jk60Eq77XyrL8P643bL7Izay"    
+      
+Resources:  
+##### Lambda
+  LambdaExecutionRole: #Use same role for staging and production
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]        
+      Path: /
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                - "s3:*"
+                Effect: Allow
+                Resource:
+                  - "arn:aws:s3:::deep-link.yourdomain.com"
+                  - "arn:aws:s3:::deep-link.yourdomain.com*"
+##### End Lambda
+
+##### API Gateway
+  ApiGatewayLambdaProxy: 
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleLambdaProxyWithCORS] }
+      Parameters:
+        Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        LambdaName: !Ref LambdaName
+
+  ApiGatewayLambdaProxyStaging: 
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: CreateStagingResources
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleLambdaProxyWithCORS] }
+      Parameters:
+        Stage: staging
+        Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        LambdaName: !Ref LambdaName        
+##### END API Gateway
+
+#### Cloudfront and DNS stuff
+  CloudFront:  
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn: ApiGatewayLambdaProxy
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleApigCustomDomain] }
+
+      Parameters:
+        Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        ApiGatewayId: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGID
+        AcmCertificateArn: !Ref AcmCertificateArn
+        Route53HostedZoneId: !Ref Route53HostedZoneId
+        CloudFrontCname: !Ref CloudFrontCname
+        VerifyFromCfHeaderVal: !Ref VerifyFromCfHeaderVal
+
+  CloudFrontStaging:  
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: CreateStagingResources
+    DependsOn: ApiGatewayLambdaProxyStaging
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/cf.yourdomain.com/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleApigCustomDomain] }
+
+      Parameters:
+        Stage: staging
+        ApiGatewayId: !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID
+        AcmCertificateArn: !Ref AcmCertificateArn
+        Route53HostedZoneId: !Ref Route53HostedZoneId
+        CloudFrontCname: !Ref CloudFrontCname
+        VerifyFromCfHeaderVal: !Ref VerifyFromCfHeaderVal
+   
+####END Cloudfront and DNS stuff  
+
+Outputs:
+  Version:
+    Description: CF-APIG-Single-Lambda template version
+    Value: 1.0.0
+
+  CloudFront:
+    Description: CloudFront ID
+    Value: !GetAtt CloudFront.Outputs.CloudFront
+  CNAME:
+    Description: Custom domain for Cloudfront
+    Value: !GetAtt CloudFront.Outputs.CNAME
+  CloudFrontStaging:
+    Description: Staging CloudFront ID
+    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CloudFront, NA]
+  CNAMEStaging:
+    Description: Staging Custom domain for Cloudfront
+    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CNAME, NA]
+
+  APIGID:
+    Description: APIG root resource ID
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGID
+  APIGURL:
+    Description: APIG stage URL
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGURL
+  APIGLambdaInvocationArn:
+    Description: ARN of lambda that will be called from APIG
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGLambdaInvocationArn
+  APIGIDStaging:
+    Description: APIG root resource ID
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID, NA]
+  APIGURLStaging:
+    Description: APIG stage URL
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGURL, NA]
+  APIGLambdaInvocationArnStaging:
+    Description: ARN of lambda that will be called from APIG
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGLambdaInvocationArn, NA]
+
+  LambdaExecutionRoleArn:
+    Description: Lambda execution role
+    Value: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}
+
+  SsmSetLambdaExecutionRoleCmd:
+    Description: SSM command to setup lambda execution role
+    Value: !Sub 
+      - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaExecutionRoleArn' --type 'String' --value 'arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
+  
+  SsmSetXFromCdnEnvVarCmd:
+    Description: SSM command to set X_FROM_CDN env var
+    Value: !Sub 
+      - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
+            

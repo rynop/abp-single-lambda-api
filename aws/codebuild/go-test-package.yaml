@@ -1,0 +1,38 @@
+version: 0.2
+env:
+  variables:
+    PKG_ZIP_NAME: "pkg.zip"
+
+phases:
+  install:
+    commands:         
+      # PACKAGE example github.com/rynop/image-manip
+      - PACKAGE="github.com/${GITHUB_ORG}/${REPO}"
+      - env 
+      - go version
+      - apt-get update -y && apt-get install -y zip python-pip
+      - pip install --upgrade awscli
+      - go get -u github.com/twitchtv/retool
+      - mkdir -p "/go/src/$(dirname ${PACKAGE})"
+      - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"    
+      - echo "/go/src/${PACKAGE}"
+      - ls -al "/go/src/${PACKAGE}"                
+  pre_build:
+    commands:
+      # Ensure that the code passes all lint tests
+      - HANDLER_FILE="${HANDLER_PATH}.go"
+      - retool do golint -set_exit_status $HANDLER_FILE  
+      # Check for common Go problems with 'go vet'
+      - go vet ./...
+      # # Run all tests included with the application
+      # - go test ./...
+  build:
+    commands:
+      - export CODE_PATH="$(dirname $HANDLER_FILE)"
+      - cd $CODE_PATH
+      - go build -o $HANDLER_PATH
+      - zip ${PKG_ZIP_NAME} "${HANDLER_PATH}"
+  post_build:
+    commands:
+      - pkgS3path="${S3_DIR_PATH_FOR_ZIPS}/${PKG_ZIP_NAME}"
+      - aws s3 --region "${AWS_REGION}" cp ${PKG_ZIP_NAME} "${pkgS3path}"
