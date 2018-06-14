@@ -75,13 +75,14 @@ for branch in "${arr[@]}"; do
 done
 
 log 'Download code' 'done'
-S3VER=$(aws ${awsCliParams} s3api list-object-versions --bucket ${nestedStacksS3Bucket} --prefix nested-stacks/apig/single-lambda-proxy-with-CORS.yaml | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
-test -z "${S3VER}" && abort "Unable to find nested stack version at s3://${nestedStacksS3Bucket}/nested-stacks/apig/single-lambda-proxy-with-CORS.yaml See https://github.com/rynop/aws-blueprint/tree/master/nested-stacks"
-sed -i "s|apig/single-lambda-proxy-with-CORS.yaml?versionid=YourS3VersionId|apig/single-lambda-proxy-with-CORS.yaml?versionid=$S3VER|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
 
-S3VER=$(aws ${awsCliParams} s3api list-object-versions --bucket ${nestedStacksS3Bucket} --prefix nested-stacks/cloudfront/single-apig-custom-domain.yaml | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
-sed -i "s|cloudfront/single-apig-custom-domain.yaml?versionid=YourS3VersionId|cloudfront/single-apig-custom-domain.yaml?versionid=$S3VER|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
-log 'Set nested-stacks ver in resources yaml' 'done'
+declare -a stackPaths=("apig/single-lambda-proxy-with-CORS.yaml" "cloudfront/single-apig-custom-domain.yaml")
+
+for stackPath in "${stackPaths[@]}"; do
+    S3VER=$(aws ${awsCliParams} s3api list-object-versions --bucket ${nestedStacksS3Bucket} --prefix nested-stacks/${stackPath} | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
+    test -z "${S3VER}" && abort "Unable to find nested stack version at s3://${nestedStacksS3Bucket}/nested-stacks/${stackPath} See https://github.com/rynop/aws-blueprint/tree/master/nested-stacks"
+    sed -i "s|${stackPath}?versionid=YourS3VersionId|${stackPath}?versionid=$S3VER|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
+done
 
 sed -i "s|us-east-1--aws-blueprint.yourdomain.com|$nestedStacksS3Bucket|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
 sed -i "s|YourLambdaNameHere|$lambdaName|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
