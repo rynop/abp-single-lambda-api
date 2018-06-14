@@ -18,13 +18,11 @@ chkreqs() {
 
 chkreqs
 
-while [[ -z "$favLang" ]]
-do
+while [[ -z "$favLang" ]]; do
     read -p "What lang (nodejs,golang,typescript): " favLang
 done
 
-while [[ -z "$nestedStacksS3Bucket" ]]
-do
+while [[ -z "$nestedStacksS3Bucket" ]]; do
     read -p "S3 bucket name storing your nested-stacks: " nestedStacksS3Bucket
 done
 
