@@ -32,7 +32,7 @@ Parameters:
   NestedStacksS3Bucket:
     Description: The name of the versioned S3 bucket you created to hold nested stack temlpates
     Type: String
-    Default: aws-blueprint.yourdomain.com
+    Default: us-east-1--aws-blueprint.yourdomain.com
 
 Conditions: 
   CreateStagingResources: !Equals [ !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], prod ]
