@@ -36,6 +36,7 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 1.  Go through the `README.md` of the **language branch** you copied, language specific setup and for stack parameter values that will be used in CI/CD stack creation (next step).
 1.  Create a CloudFormation stack for your CI/CD using [single-lambda-test-staging-prod.yaml](https://github.com/rynop/aws-blueprint/blob/master/pipelines/cicd/single-lambda-test-staging-prod.yaml) with the stack naming convention of `[repo]--[branch]--[eyecatcher]--cicd`.  Ex: `abp-single-lambda-api--master--ResizeImage--cicd`.  
 1. Commit your code and the CI/CD CodePipline will automatically run.
+1. The domain your app can be reached, is located in the `Outputs` tab of the resources CloudFormation stack at key `CNAME`.
 1. Edit your cloudfront > dist settings > change Security policy to `TLSv1.1_2016`.  CloudFormation does not support this parameter yet.
 1. Create a DNS entry in route53 for production that consumers will use.  The cloud formation creates one for `prod--` but you do not want to use this as the CloudFormation can be deleted.
 
