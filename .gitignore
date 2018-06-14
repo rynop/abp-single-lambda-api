@@ -13,7 +13,4 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-#built files
-bin/
-
 node_modules/
