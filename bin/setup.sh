@@ -111,5 +111,8 @@ CI/CD CloudFormation stack name will be:
 
 $githubRepoName--$gitBranch--[eyecatcher]--cicd
 LambdaName Parameter: $lambdaName
+S3BucketForLambdaPackageZips: $nestedStacksS3Bucket
+
+See https://github.com/rynop/abp-single-lambda-api/tree/$favLang for language specific CI/CD parameters
 
 TheMsg
