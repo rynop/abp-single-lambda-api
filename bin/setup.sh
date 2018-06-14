@@ -102,7 +102,7 @@ aws ssm put-parameter --name '/test/$githubRepoName/$gitBranch/$lambdaName/lambd
 aws ssm put-parameter --name '/staging/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
 aws ssm put-parameter --name '/prod/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
 
-Resources CloudFormation stack names will be:
+Create resources CloudFormation stacks with the names:
 
 test--$githubRepoName--$gitBranch--[eyecatcher]--r
 prod--$githubRepoName--$gitBranch--[eyecatcher]--r
