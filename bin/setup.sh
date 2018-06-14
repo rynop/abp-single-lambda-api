@@ -38,7 +38,7 @@ awsCliParams="--region ${nestedStacksS3BucketRegion} --profile ${awsCliProfile}"
 for branch in "${arr[@]}"
 do
     url="https://github.com/rynop/abp-single-lambda-api/archive/${branch}.zip"
-    wget -qO- "${url}" | bsdtar -xvf-
+    wget -qO- "${url}" | bsdtar -xf-
     if [ $? -ne 0 ] ; then
         abort "Error downloading ${url}"
     fi
