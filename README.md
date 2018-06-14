@@ -4,7 +4,7 @@
 
 ## Setup
 
-Follow [setup steps](https://github.com/rynop/abp-single-lambda-api#setup) that are common across all languages
+Follow [setup steps](https://github.com/rynop/abp-single-lambda-api#setup) that are common across all languages.  You can see a complete working example of the steps below at [validate-abp-single-lambda-api](https://github.com/rynop/validate-abp-single-lambda-api)
 
 ### CI/CD CloudFormation Parameters:
 
