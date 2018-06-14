@@ -8,6 +8,7 @@ Parameters:
 
   AcmCertificateArn:
     Description: The ARN of a certificate from AWS Certificate Manager (ACM)
+    Default: arn:aws:acm:us-east-1:111:certificate/1111-2a50-4e70-b9f0-8f71585ce17b
     Type: String
 
   LambdaName:

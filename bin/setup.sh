@@ -58,5 +58,7 @@ sed -i "s|apig/single-lambda-proxy-with-CORS.yaml?versionid=YourS3VersionId|apig
 S3VER=$(aws ${awsCliParams} s3api list-object-versions --bucket ${nestedStacksS3Bucket} --prefix nested-stacks/cloudfront/single-apig-custom-domain.yaml | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
 sed -i "s|cloudfront/single-apig-custom-domain.yaml?versionid=YourS3VersionId|cloudfront/single-apig-custom-domain.yaml?versionid=$S3VER|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
 
+sed -i "s|us-east-1--aws-blueprint.yourdomain.com|$nestedStacksS3Bucket|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
+
 grep YourS3VersionId aws/cloudformation/cf-apig-single-lambda-resources.yaml
 test $? -eq 0 && abort "Unable to set your nested-stack template S3 versions"

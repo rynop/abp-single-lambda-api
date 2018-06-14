@@ -20,7 +20,7 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 
     This does:
     *  Downloads the branch of of your favorite programming language, and common [aws](./aws) dir out of `master` branch.  
-    *  Figures out and sets the s3 versions of your `nested-stacks` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
+    *  Figures out and sets the s3 versions of your `nested-stacks` and `NestedStacksS3Bucket` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
 1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
     *  Create a stack for your `test` and `production` stages.  You will have 2 root stacks.  The `prod` stack takes care of both `prod` and `staging` resources.
     *  The `Outputs` tab in the CloudFormation UI for each root stack has commands you will run in the next steps.
