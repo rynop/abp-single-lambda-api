@@ -14,11 +14,12 @@ Parameters:
   LambdaName:
     Description: Lambda function name (should not exist when creating test, will when creating production/staging).  This value will be prepended with [Repo]--[Branch]--
     Type: String
+    Default: YourLambdaNameHere
 
   Route53HostedZoneId:
     Description: Hosted Zone ID where domain name for CloudFront will be made
     Type: String
-    Default: Z2FDTNDATAQYW2
+    Default: 1111TNDATAQYW2
 
   CloudFrontCname:
     Description: Custom domain name to use (foo.yourdomain.com).  Will prefix this with stageName--
@@ -28,6 +29,7 @@ Parameters:
   VerifyFromCfHeaderVal:
     Description: A custom header X-From-CDN with val below be passed to your orgin, to verify request came 
     Type: String
+    Default: fromCf
 
   NestedStacksS3Bucket:
     Description: The name of the versioned S3 bucket you created to hold nested stack temlpates
@@ -175,15 +177,20 @@ Outputs:
     Description: Lambda execution role
     Value: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}
 
-  SsmSetLambdaExecutionRoleCmd:
+  RunSsmSetLambdaExecutionRoleCmd:
     Description: SSM command to setup lambda execution role
     Value: !Sub 
       - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaExecutionRoleArn' --type 'String' --value 'arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}'
       - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
   
-  SsmSetXFromCdnEnvVarCmd:
+  RunSsmSetXFromCdnEnvVarCmd:
     Description: SSM command to set X_FROM_CDN env var
     Value: !Sub 
       - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
       - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
+  RunSsmSetXFromCdnEnvVarCmdStaging:
+    Description: SSM command to set X_FROM_CDN env var for staging
+    Value: !Sub 
+      - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+      - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}      
             

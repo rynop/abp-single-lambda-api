@@ -13,28 +13,28 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 
 ## Setup
 
-1. Get & run the setup script: 
+1. Run the setup script: 
     ```
     wget -q https://raw.githubusercontent.com/rynop/abp-single-lambda-api/master/bin/setup.sh; bash setup.sh; rm setup.sh
     ```
 
-    This does:
+    This:
     *  Downloads the branch of of your favorite programming language, and common [aws](./aws) dir out of `master` branch.  
-    *  Figures out and sets the s3 versions of your `nested-stacks` and `NestedStacksS3Bucket` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
+    *  Sets `NestedStacksS3Bucket` and s3 versions of your `nested-stacks` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
 1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
     *  Create a stack for your `test` and `production` stages.  You will have 2 root stacks.  The `prod` stack takes care of both `prod` and `staging` resources.
-    *  The `Outputs` tab in the CloudFormation UI for each root stack has commands you will run in the next steps.
+    *  The `Outputs` tab in the CloudFormation UI for each root stack has commands you will run in the next steps.  Outputs that start with `Run*` you should run from your CLI.
 1. Some of the Lambda configuration is stored in [Systems manager parameter store](https://console.aws.amazon.com/systems-manager/parameters) with the convention based prefix `/<stage>/<repoName>/<branch>/<lambdaName>/`.  Ex: `aws ssm put-parameter --name "/prod/abp-single-lambda-api/master/ResizeImage/lambdaExecutionRoleArn" --type "String" --value 'arn:aws:iam::accountId:role/roleName'`.  These keys are required **per** stage:
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaExecutionRoleArn` (don't create for `staging` stage.  `staging` uses the `prod` `lambdaExecutionRoleArn`).  The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetLambdaExecutionRoleCmd` value that is an aws CLI command that sets this for you.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaTimeout`
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaMemory`
 1.  Setup env vars **per** stage.  All keys in the `lambdaEnvs` namespace are automatically added your your lambda's env.  They can optionally be encrypted in systems manager param store, we handle all the decoding complexity (if you use the default KMS key).
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaEnvs/<env var name>`.  Ex: `/prod/abp-single-lambda-api/master/ResizeImage/lambdaEnvs/MY_VAR`    
-    * The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetXFromCdnEnvVarCmd` value that is an aws ssm command that can be run on your CLI to set the `X_FROM_CDN` env var (used by the example code).
-    * The following env vars will automatically be set in the lambda configuration: `APP_STAGE`
+    * Run the `SsmSetXFromCdnEnvVarCmd` output value from the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml).  It sets `X_FROM_CDN` (used by the example code in this repo).
+    * These env vars get set for your in the lambda configuration: `APP_STAGE`
 1.  Create a Github user (acct will just be used to read repos for CI/CD), give it read auth to your github repo.  Create a personal access token for this user at https://github.com/settings/tokens.  This token will be used by the CI/CD to pull code.    
 1.  Go through the `README.md` of the **language branch** you copied, language specific setup and for stack parameter values that will be used in CI/CD stack creation (next step).
-1.  Create a CloudFormation stack for your CI/CD using [single-lambda-test-staging-prod.yaml](https://github.com/rynop/aws-blueprint/pipelines/cicd/single-lambda-test-staging-prod.yaml) with the stack naming convention of `[repo]--[branch]--[eyecatcher]--cicd`.  Ex: `prod--abp-single-lambda-api--master--ResizeImage--cicd`.  
+1.  Create a CloudFormation stack for your CI/CD using [single-lambda-test-staging-prod.yaml](https://github.com/rynop/aws-blueprint/blob/master/pipelines/cicd/single-lambda-test-staging-prod.yaml) with the stack naming convention of `[repo]--[branch]--[eyecatcher]--cicd`.  Ex: `abp-single-lambda-api--master--ResizeImage--cicd`.  
 1.  Commit your code and the CI/CD CodePipline will automatically run.
 
 ## Backup info (if you care about inner workings)
