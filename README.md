@@ -13,26 +13,12 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 
 ## Setup
 
-1. Download the branch of this repo for your favorite programming language, extract to your own github repo. Ex: `wget -qO- https://github.com/rynop/abp-single-lambda-api/archive/golang.zip | bsdtar -xvf-`
-1. Copy the [aws](./aws) dir out of `master` to the root of your repo.  Run this from your repo root: `
-    ```
-    wget -qO- https://github.com/rynop/abp-single-lambda-api/archive/master.zip | bsdtar -xvf-
-    mv ./abp-single-lambda-api-master/aws .
-    rm -r abp-single-lambda-api-master`
-    ```
-1. Set the `nested-stacks` s3 version in your resources CloudFormation (`aws/cloudformation/cf-apig-single-lambda-resources.yaml`).  From your project root run (replace `aws-blueprint.yourdomain.com`):
-    ```
-    S3VER=$(aws s3api list-object-versions --bucket aws-blueprint.yourdomain.com --prefix nested-stacks/apig/single-lambda-proxy-with-CORS.yaml | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
-
-    sed -i "s|apig/single-lambda-proxy-with-CORS.yaml?versionid=YourS3VersionId|apig/single-lambda-proxy-with-CORS.yaml?versionid=$S3VER|" aws/cloudformation/cf-apig-single-lambda-resources.yaml
-    
-    S3VER=$(aws s3api list-object-versions --bucket aws-blueprint.yourdomain.com --prefix nested-stacks/cloudfront/single-apig-custom-domain.yaml | jq -r '.Versions[] | select(.IsLatest == true) | .VersionId')
-    
-    sed -i "s|cloudfront/single-apig-custom-domain.yaml?versionid=YourS3VersionId|cloudfront/single-apig-custom-domain.yaml?versionid=$S3VER|" aws/cloudformation/cf-apig-single-lambda-resources.yaml 
-    ```
-1. Create your "resources" (CloudFront, API Gateway etc) via the Resources CloudFormation file in your repo at `aws/cloudformation/cf-apig-single-lambda-resources.yaml`. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
-    *  Create a stack for your `test` and `production` stages.  You should have 2 root stacks.  
-    *  The `prod` stack takes care of both `prod` and `staging` resources.  Take note of the `Outputs` tab in the CloudFormation UI of each root stack.  
+1. Run the setup script: `curl -L https://git.io/n-install | bash`.  This does:
+    *  Downloads the branch of of your favorite programming language, and common [aws](./aws) dir out of `master` branch.  
+    *  Figures out and sets the s3 versions of your `nested-stacks` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
+1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
+    *  Create a stack for your `test` and `production` stages.  You will have 2 root stacks.  The `prod` stack takes care of both `prod` and `staging` resources.
+    *  The `Outputs` tab in the CloudFormation UI for each root stack has commands you will run in the next steps.
 1. Some of the Lambda configuration is stored in [Systems manager parameter store](https://console.aws.amazon.com/systems-manager/parameters) with the convention based prefix `/<stage>/<repoName>/<branch>/<lambdaName>/`.  Ex: `aws ssm put-parameter --name "/prod/abp-single-lambda-api/master/ResizeImage/lambdaExecutionRoleArn" --type "String" --value 'arn:aws:iam::accountId:role/roleName'`.  These keys are required **per** stage:
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaExecutionRoleArn` (don't create for `staging` stage.  `staging` uses the `prod` `lambdaExecutionRoleArn`).  The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetLambdaExecutionRoleCmd` value that is an aws CLI command that sets this for you.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaTimeout`
