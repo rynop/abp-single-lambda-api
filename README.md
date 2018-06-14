@@ -13,7 +13,12 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 
 ## Setup
 
-1. Get & run the setup script: `wget -q https://raw.githubusercontent.com/rynop/abp-single-lambda-api/master/bin/setup.sh; bash setup.sh; rm setup.sh`.  This does:
+1. Get & run the setup script: 
+    ```
+    wget -q https://raw.githubusercontent.com/rynop/abp-single-lambda-api/master/bin/setup.sh; bash setup.sh; rm setup.sh
+    ```
+
+    This does:
     *  Downloads the branch of of your favorite programming language, and common [aws](./aws) dir out of `master` branch.  
     *  Figures out and sets the s3 versions of your `nested-stacks` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
 1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
