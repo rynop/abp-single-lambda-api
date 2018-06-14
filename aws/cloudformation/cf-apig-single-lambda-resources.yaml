@@ -180,17 +180,17 @@ Outputs:
   RunSsmSetLambdaExecutionRoleCmd:
     Description: SSM command to setup lambda execution role
     Value: !Sub 
-      - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaExecutionRoleArn' --type 'String' --value 'arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}'
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaExecutionRoleArn' --type 'String' --value 'arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}'
       - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
   
   RunSsmSetXFromCdnEnvVarCmd:
     Description: SSM command to set X_FROM_CDN env var
     Value: !Sub 
-      - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
       - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
   RunSsmSetXFromCdnEnvVarCmdStaging:
     Description: SSM command to set X_FROM_CDN env var for staging
     Value: !Sub 
-      - aws ssm put-parameter --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
       - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}      
             
