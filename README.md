@@ -16,11 +16,12 @@ Project layout is based on [golang-standards/project-layout](https://github.com/
 
 We recommend using [retool](https://github.com/twitchtv/retool) to manage your tools (like (dep)[https://github.com/golang/dep]).  Why?  If you work with anyone else on your project, and they have different versions of their tools, everything turns to shit.
 
-1. (Install retool)[https://github.com/twitchtv/retool#usage]: `go get github.com/twitchtv/retool`. Make sure to add `$GOPATH/bin` to your PATH
+1. [Install retool](https://github.com/twitchtv/retool#usage): `go get github.com/twitchtv/retool`. Make sure to add `$GOPATH/bin` to your PATH
+1. Update the code to use your go package, by doing an extended find and replace of all occurances of `rynop/abp-single-lambda-api` with your golang package namespace.
 1. These commands should be run in each of your go projects
-    1. `retool add github.com/golang/dep/cmd/dep origin/master`
-    1. `retool add github.com/golang/lint/golint origin/master`
-    1. `retool do dep init`.  In this case, since we already have a `dep` project setup, run `retool do dep ensure`
+    1.  `retool add github.com/golang/dep/cmd/dep origin/master`
+    1.  `retool add github.com/golang/lint/golint origin/master`
+    1.  `retool do dep ensure`.  If this was a new repo you'd run `retool do dep init`
 1. Add dependency example: `retool do dep ensure -add github.com/apex/gateway github.com/aws/aws-lambda-go`
 
 ## Twirp Lambda
