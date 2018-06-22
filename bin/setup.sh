@@ -15,6 +15,9 @@ chkreqs() {
     
     command -v aws > /dev/null
     test $? -ne 0 && abort "aws cli required"
+
+    sed -v 2>&1 | grep -i "gnu sed" >/dev/null
+    test $? -ne 0 && abort "GNU sed required to run this quickstart script. See https://github.com/rynop/aws-blueprint#gnu-tools"
 }
 
 chkreqs
