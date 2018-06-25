@@ -16,11 +16,6 @@ Parameters:
     Type: String
     Default: YourLambdaNameHere
 
-  Route53HostedZoneId:
-    Description: Hosted Zone ID where domain name for CloudFront will be made
-    Type: String
-    Default: 1111TNDATAQYW2
-
   CloudFrontCname:
     Description: Custom domain name to use (foo.yourdomain.com).  Will prefix this with stageName--
     Type: String
@@ -113,7 +108,7 @@ Resources:
         Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]
         ApiGatewayId: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGID
         AcmCertificateArn: !Ref AcmCertificateArn
-        Route53HostedZoneId: !Ref Route53HostedZoneId
+        Route53HostedZoneId: Z2FDTNDATAQYW2
         CloudFrontCname: !Ref CloudFrontCname
         VerifyFromCfHeaderVal: !Ref VerifyFromCfHeaderVal
 
@@ -130,7 +125,7 @@ Resources:
         Stage: staging
         ApiGatewayId: !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID
         AcmCertificateArn: !Ref AcmCertificateArn
-        Route53HostedZoneId: !Ref Route53HostedZoneId
+        Route53HostedZoneId: Z2FDTNDATAQYW2
         CloudFrontCname: !Ref CloudFrontCname
         VerifyFromCfHeaderVal: !Ref VerifyFromCfHeaderVal
    
