@@ -23,7 +23,7 @@ phases:
       - node --version
       - npm install -g typescript
       - tsc --version
-      - npm install
+      - npm rebuild #check your node_modules in
   pre_build:
     commands:
       - npm run test

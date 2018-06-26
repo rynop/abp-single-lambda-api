@@ -21,7 +21,7 @@ phases:
       - pip install --upgrade awscli     
       - npm --version
       - node --version 
-      - npm install
+      - npm rebuild #check your node_modules in
   # pre_build:
   #   commands:
   #     - TODO: npm test
