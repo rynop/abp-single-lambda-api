@@ -28,7 +28,7 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaExecutionRoleArn` (don't create for `staging` stage.  `staging` uses the `prod` `lambdaExecutionRoleArn`).  The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetLambdaExecutionRoleCmd` value that is an aws CLI command that sets this for you.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaTimeout`
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaMemory`
-1.  Setup env vars **per** stage.  All keys in the `lambdaEnvs` namespace are automatically added your your lambda's env.  They can optionally be encrypted in systems manager param store, we handle all the decoding complexity (if you use the default KMS key).
+1.  Setup env vars **per** stage.  All keys in the `lambdaEnvs` namespace are automatically added your your lambda's env.  They can optionally be encrypted in systems manager param store, we handle all the decoding complexity (if you use the default KMS key).  You can use [this script](https://github.com/rynop/aws-blueprint/blob/master/bin/lambda-ssm-env-var-helper.sh) help set them.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaEnvs/<env var name>`.  Ex: `/prod/abp-single-lambda-api/master/ResizeImage/lambdaEnvs/MY_VAR`    
     * Run the `SsmSetXFromCdnEnvVarCmd` output value from the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml).  It sets `X_FROM_CDN` (used by the example code in this repo).
     * These env vars get set for your in the lambda configuration: `APP_STAGE`
