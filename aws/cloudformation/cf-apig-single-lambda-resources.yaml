@@ -142,12 +142,6 @@ Outputs:
   CNAME:
     Description: Custom domain for Cloudfront
     Value: !GetAtt CloudFront.Outputs.CNAME
-  CloudFrontStaging:
-    Description: Staging CloudFront ID
-    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CloudFront, NA]
-  CNAMEStaging:
-    Description: Staging Custom domain for Cloudfront
-    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CNAME, NA]
 
   APIGID:
     Description: APIG root resource ID
@@ -157,20 +151,17 @@ Outputs:
     Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGURL
   APIGLambdaInvocationArn:
     Description: ARN of lambda that will be called from APIG
-    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGLambdaInvocationArn
-  APIGIDStaging:
-    Description: APIG root resource ID
-    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID, NA]
-  APIGURLStaging:
-    Description: APIG stage URL
-    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGURL, NA]
-  APIGLambdaInvocationArnStaging:
-    Description: ARN of lambda that will be called from APIG
-    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGLambdaInvocationArn, NA]
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGLambdaInvocationArn  
 
   LambdaExecutionRoleArn:
     Description: Lambda execution role
     Value: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}
+
+  FullLambdaName:
+    Description: Full lambda name
+    Value: !Sub
+      - ${Repo}--${Branch}--${LambdaName}
+      - { LambdaName: !Ref LambdaName, Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ] }          
 
   RunSsmSetLambdaExecutionRoleCmd:
     Description: SSM command to setup lambda execution role
@@ -183,14 +174,80 @@ Outputs:
     Value: !Sub 
       - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
       - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
+
+  RunSsmSetLambdaMemory:
+    Description: SSM command to define lambda memory
+    Value: !Sub 
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaMemory' --type 'String' --value 'yourMemoryHere'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+
+  RunSsmSetLambdaTimeoutKey:
+    Description: SSM command to define lambda timeout
+    Value: !Sub 
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaTimeout' --type 'String' --value 'yourTimeoutHere'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+
+  SSMEnvVarsPath:
+    Description: SSM prefix where env vars should be defined
+    Value: !Sub 
+      - /${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+
+  #staging output
+  CloudFrontStaging:
+    Description: Staging CloudFront ID
+    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CloudFront, NA]
+  CNAMEStaging:
+    Description: Staging Custom domain for Cloudfront
+    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CNAME, NA]
+
+  APIGIDStaging:
+    Description: APIG root resource ID
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID, NA]
+  APIGURLStaging:
+    Description: APIG stage URL
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGURL, NA]
+  APIGLambdaInvocationArnStaging:
+    Description: ARN of lambda that will be called from APIG
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGLambdaInvocationArn, NA]
+
+  RunSsmSetLambdaMemoryStaging:
+    Description: SSM command to define lambda memory
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub 
+        - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaMemory' --type 'String' --value 'yourMemoryHere'
+        - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+      - NA        
+
+  RunSsmSetLambdaTimeoutKeyStaging:
+    Description: SSM command to define lambda timeout
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub 
+        - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaTimeout' --type 'String' --value 'yourTimeoutHere'
+        - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}    
+      - NA
+
+  SSMEnvVarsPathStaging:
+    Description: staging SSM prefix where env vars should be defined
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub 
+        - /staging/${Repo}/${Branch}/${LambdaName}/lambdaEnvs
+        - { Repo: 'staging', Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}                
+      - NA
+
   RunSsmSetXFromCdnEnvVarCmdStaging:
     Description: SSM command to set X_FROM_CDN env var for staging
-    Value: !Sub 
-      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
-      - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}      
-            
-  FullLambdaName:
-    Description: Full lambda name
-    Value: !Sub
-      - ${Repo}--${Branch}--${LambdaName}
-      - { LambdaName: !Ref LambdaName, Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ] }          
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub
+        - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+        - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}      
+      - NA        
+  #end staging output         
