@@ -164,7 +164,7 @@ Outputs:
       - { LambdaName: !Ref LambdaName, Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ] }          
 
   RunSsmSetLambdaExecutionRoleCmd:
-    Description: SSM command to setup lambda execution role
+    Description: SSM command to setup lambda execution role.  Staging will use the prod value of this key
     Value: !Sub 
       - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaExecutionRoleArn' --type 'String' --value 'arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}'
       - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
@@ -238,7 +238,7 @@ Outputs:
       - 
         !Sub 
         - /staging/${Repo}/${Branch}/${LambdaName}/lambdaEnvs
-        - { Repo: 'staging', Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}                
+        - { Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}                
       - NA
 
   RunSsmSetXFromCdnEnvVarCmdStaging:
