@@ -56,3 +56,10 @@ The publishing process is multi-stage, with manual approvals, all handled in an 
 *  When CodePipeline `ApproveStaging` approved, `PublishProd` step: : 
     1.  Update lambda using `${codeSha256}.zip`. Set env vars from [ssm](https://console.aws.amazon.com/systems-manager/parameters) namespace `/prod/[repo]/[branch]/[LAMBDA_NAME]/lambdaEnvs`, role from `/prod/[repo]/[branch]/[LAMBDA_NAME]/lambdaExecutionRoleArn`, timeout from `/staging/[repo]/[branch]/[LAMBDA_NAME]/lambdaTimeout`, memory from `/prod/[repo]/[branch]/[LAMBDA_NAME]/lambdaMemory`.  
     1.  Create Lambda version & alias `prod` 
+
+
+# Lambda with no web API
+
+Want a lambda that does not need a web API (that is invoked by something like sns)?  Follow the steps above, but instead of using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` for your resources CloudFormation, use `aws/cloudformation/no-web-api-single-lambda-resources.yaml`.  You will use the same [codebuild](./codebuild) files and same CI/CD.
+
+Astute developers may notice an APIG line in [aws/codebuild/lambda-publish](./aws/codebuild/lambda-publish.yaml), however this has no impact and will not fail the build.
