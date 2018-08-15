@@ -15,8 +15,7 @@ phases:
   install:
     commands:      
       - env
-      - apt-get update -y && apt-get install -y jq python3-dev
-      - pip install --upgrade awscli
+      - apt-get update -y && apt-get install -y jq
   pre_build:
     commands: 
       # Get lambda runtime config from AWS Systems Manager Parameter Store.  If staging, use prod ARN
