@@ -10,18 +10,15 @@ phases:
   install:
     commands:
       - env
-      - apt-get update -y && apt-get install -y zip
-      - python --version
-      - pip --version
-      - pip install --upgrade awscli --user
-      - PATH=$PATH:/root/.local/bin
+      - which java
+      - java -version
+      - which mvn
+      - mvn --version
       - which aws
       - aws --version
-      - python3 -c 'import awscli; print(awscli)'
-      - pip install -r requirements.txt -t ./packages --upgrade
   build:
     commands:
-      - zip -q -r ${PKG_ZIP_NAME} src py-packages
+      - zip -q -r ${PKG_ZIP_NAME} src
   post_build:
     commands:
       - pkgS3path="${S3_DIR_PATH_FOR_ZIPS}/${PKG_ZIP_NAME}"
