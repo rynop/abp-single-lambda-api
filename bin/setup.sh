@@ -23,7 +23,7 @@ chkreqs() {
 chkreqs
 
 while [[ -z "$favLang" ]]; do
-    read -p "What lang (nodejs,golang,typescript): " favLang
+    read -p "What lang (nodejs,golang,typescript,python): " favLang
 done
 
 while [[ -z "$nestedStacksS3Bucket" ]]; do
