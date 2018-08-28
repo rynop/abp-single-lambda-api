@@ -1,0 +1,513 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: CloudFront > APIG > Single Labmda.  
+  Naming convention, [stage]--[repo]--[branch]--[eyecatcher]--r
+  SSL only, custom DomainName, custom header to verify requests come through CloudFront, Edge Gzip, Caching OPTIONS
+
+Parameters:
+
+  # DeletionPolicy:
+  #   Default: Delete
+  #   Type: String
+  #   Description: "Prevent deletion of resources"
+  #   AllowedValues:
+  #     - Retain
+  #     - Delete
+
+  AcmCertificateArn:
+    Description: The ARN of a certificate from AWS Certificate Manager (ACM)
+    Default: arn:aws:acm:us-east-1:111:certificate/1111-2a50-4e70-b9f0-8f71585ce17b
+    Type: String
+
+  LambdaName:
+    Description: Lambda function name (should not exist when creating test, will when creating production/staging).  This value will be prepended with [Repo]--[Branch]--
+    Type: String
+    Default: myAPI
+
+  CloudFrontCname:
+    Description: Custom domain name to use (foo.yourdomain.com).  Will prefix this with stageName--
+    Type: String
+    Default: api.yourdomain.com
+
+  VerifyFromCfHeaderVal:
+    Description: A custom header X-From-CDN with val below be passed to your orgin, to verify request came 
+    Type: String
+    Default: someCoolVal
+
+  NestedStacksS3Bucket:
+    Description: The name of the versioned S3 bucket you created to hold nested stack temlpates
+    Type: String
+    Default: us-east-1--aws-blueprint.yourdomain.com
+
+  VpcCIDR:
+    Type: String
+    Default: 11.1.0.0/16
+
+  PublicSubnet1CIDR:
+    Type: String
+    Default: 11.1.32.0/20
+  PublicSubnet2CIDR:
+    Type: String
+    Default: 11.1.96.0/20
+  PublicSubnet3CIDR:
+    Type: String
+    Default: 11.1.160.0/20
+
+  PrivateSubnet1CIDR:
+    Type: String
+    Default: 11.1.0.0/19
+  PrivateSubnet2CIDR:
+    Type: String
+    Default: 11.1.64.0/19
+  PrivateSubnet3CIDR:
+    Type: String
+    Default: 11.1.128.0/19
+
+  DbName:
+    Description: The Db name.  Will automatically be prefixed with the stage name
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DbUsername:
+    AllowedPattern: "[a-zA-Z0-9]+"
+    ConstraintDescription: must be between 1 to 16 alphanumeric characters.
+    Description: The Db admin account user name, between 1 to 16 alphanumeric characters.
+    MaxLength: 16
+    MinLength: 1
+    Type: String
+  DbPassword:
+    AllowedPattern: "[a-zA-Z0-9]+"
+    ConstraintDescription: must be between 8 to 41 alphanumeric characters.
+    Description: The Db admin account password, between 8 to 41 alphanumeric characters.
+    MaxLength: 41
+    MinLength: 8
+    NoEcho: true
+    Type: String
+  DbInstanceClass:
+    Default: db.t2.small
+    Type: String
+    Description: "Db instance class"
+    ConstraintDescription: DB instance class not supported
+    AllowedValues:
+      - db.t2.small
+      - db.t2.medium
+      - db.t2.xlarge
+      - db.r4.large
+      - db.r4.xlarge
+      - db.r4.2xlarge
+      - db.r4.4xlarge
+      - db.r4.8xlarge
+      - db.r4.16xlarge  
+
+  DbAlarmMaxCpuPercent:
+    Description: Db CPU % max for alarm
+    Type: Number
+    Default: 80
+    MinValue: 1
+    MaxValue: 99
+    ConstraintDescription: Must be a percentage between 1-99%
+
+  DbAlarmReadLatencyMaxSeconds:
+    Description: Read latency max for alarm
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  DbAlarmWriteLatencyMaxSeconds:
+    Description: Write latency max for alarm
+    Type: Number
+    Default: 1
+    MinValue: 1
+
+  DbAlarmEvaluationPeriods:
+    Description: The number of periods over which data is compared to the specified threshold
+    Type: Number
+    Default: 2
+    MinValue: 2
+
+  DbAlarmEvaluationPeriodSeconds:
+    Description: The time over which the specified statistic is applied. Specify time in seconds, in multiples of 60. Enhanced monitoring must be enabled if less than 500 seconds
+    Type: Number
+    Default: 300
+    MinValue: 60
+    ConstraintDescription: Must be at least 60 seconds
+
+  DbEnhancedMonitoring:
+    Default: false
+    Type: String
+    Description: The optional flag for enhanced monitoring (additional charges apply - https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Monitoring.OS.html)
+    ConstraintDescription: Only true or false are allowed
+    AllowedValues:
+      - true
+      - false
+
+  # Default is 200 MB
+  DbAlarmSwapUsageInBytes:
+    Default: 209715200
+    Type: Number
+    Description: Number of swap usage bytes for alarm (if enabled - Aurora MySQL only)
+    MinValue: 1
+    ConstraintDescription: Enter a value of at least one byte
+
+  DbEnableAlarms:
+    Default: false
+    Type: String
+    Description: Set to true to enable (additional charges - https://aws.amazon.com/cloudwatch/pricing/ - currently, Aurora MySQL only)
+    ConstraintDescription: Only true or false are allowed
+    AllowedValues:
+      - true
+      - false  
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Aurora config"
+        Parameters:
+          - DbName
+          - DbUsername
+          - DbPassword
+          - DbInstanceClass
+          - DbAlarmMaxCpuPercent
+          - DbAlarmReadLatencyMaxSeconds
+          - DbAlarmWriteLatencyMaxSeconds
+          - DbAlarmEvaluationPeriods
+          - EnhancedMonitoring
+          - DbAlarmSwapUsageInBytes
+          - DbEnableAlarms
+      - Label:
+          default: "VPC"
+        Parameters:
+          - VpcCIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - PublicSubnet3CIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+          - PrivateSubnet3CIDR
+
+Conditions: 
+  CreateStagingResources: !Equals [ !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], prod ]  
+
+Mappings: 
+  NestedStacks: 
+    infrastructure: 
+      "singleLambdaProxyWithCORS": "apig/single-lambda-proxy-require-api-key-with-CORS.yaml?versionid=YourS3VersionId"
+      "singleApigCustomDomain": "cloudfront/single-apig-custom-domain.yaml?versionid=YourS3VersionId"    
+      "vpc": "vpc/three-sub-nat-gateway.yaml?versionid=YourS3VersionId"
+      "aurora": "rds/aurora.yaml?versionid=YourS3VersionId"
+      
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, vpc] }
+
+        # https://s3.amazonaws.com/cf.yourdomain.com/infrastructure/vpc.yaml?versionid=WH_GYYQbsoadVDXO9Lqv0vhBWzpV0raw
+      Parameters:
+        EnvironmentName: !Ref AWS::StackName
+        VpcCIDR: !Ref VpcCIDR
+        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
+        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        PublicSubnet3CIDR: !Ref PublicSubnet3CIDR
+        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
+        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
+        PrivateSubnet3CIDR: !Ref PrivateSubnet3CIDR
+##### Lambda
+  LambdaExecutionRole: #Use same role for staging and production
+    Type: AWS::IAM::Role
+    #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]        
+      Path: /
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                - "s3:*"
+                Effect: Allow
+                Resource:
+                  - !GetAtt MyBucket.Arn
+                  - !Sub 
+                    - "${bucketArn}*"
+                    - { bucketArn: !GetAtt MyBucket.Arn }
+##### End Lambda
+
+##### API Gateway
+  ApiGatewayLambdaProxy: 
+    Type: 'AWS::CloudFormation::Stack'
+    #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleLambdaProxyWithCORS] }
+      Parameters:
+        Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        LambdaName: !Ref LambdaName
+
+  ApiGatewayLambdaProxyStaging: 
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: CreateStagingResources
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleLambdaProxyWithCORS] }
+      Parameters:
+        Stage: staging
+        Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        LambdaName: !Ref LambdaName        
+##### END API Gateway
+
+#### Cloudfront and DNS stuff
+  CloudFront:  
+    Type: 'AWS::CloudFormation::Stack'
+    #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true
+    DependsOn: ApiGatewayLambdaProxy
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleApigCustomDomain] }
+
+      Parameters:
+        Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]
+        ApiGatewayId: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGID
+        AcmCertificateArn: !Ref AcmCertificateArn
+        Route53HostedZoneId: Z2FDTNDATAQYW2
+        CloudFrontCname: !Ref CloudFrontCname
+        VerifyFromCfHeaderVal: !Ref VerifyFromCfHeaderVal
+
+  CloudFrontStaging:  
+    Type: 'AWS::CloudFormation::Stack'
+    Condition: CreateStagingResources
+    DependsOn: ApiGatewayLambdaProxyStaging
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, singleApigCustomDomain] }
+
+      Parameters:
+        Stage: staging
+        ApiGatewayId: !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID
+        AcmCertificateArn: !Ref AcmCertificateArn
+        Route53HostedZoneId: Z2FDTNDATAQYW2
+        CloudFrontCname: !Ref CloudFrontCname
+        VerifyFromCfHeaderVal: !Ref VerifyFromCfHeaderVal
+   
+####END Cloudfront and DNS stuff  
+
+####S3
+  MyBucket:
+    Type: AWS::S3::Bucket
+    #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true  
+    Properties:
+      BucketName: !Sub 
+        - ${AWS::Region}--${Stage}--${Branch}--mybucket.yourdomain.com
+        - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ] }
+      # ReplicationConfiguration:
+      #   Role: !GetAtt [WorkItemBucketBackupRole, Arn]
+      #   Rules:
+      #   - Destination:
+      #       Bucket: !Join ['', ['arn:aws:s3:::', !Join ['-', [!Ref 'AWS::Region', !Ref 'AWS::StackName',
+      #               replicationbucket]]]]
+      #       StorageClass: STANDARD
+      #     Id: Backup
+      #     Prefix: ''
+      #     Status: Enabled
+      VersioningConfiguration:
+        Status: Enabled
+####End S3
+
+####Aurora
+  AuroraVPCSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true
+      DependsOn: VPC
+      Properties: 
+        VpcId: !GetAtt VPC.Outputs.VPC
+        GroupDescription: Access aurora in VPC
+        SecurityGroupIngress:
+            # Allow access from private subnets
+            - CidrIp: !Ref PrivateSubnet1CIDR
+              IpProtocol: -1
+            - CidrIp: !Ref PrivateSubnet2CIDR
+              IpProtocol: -1              
+            - CidrIp: !Ref PrivateSubnet3CIDR
+              IpProtocol: -1              
+        Tags: 
+            - Key: Name
+              Value: !Sub ${AWS::StackName}-private-subnets
+            - Key: Stage
+              Value: !Sub 
+                - ${Stage}
+                - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ] }
+  
+  Aurora:
+    Type: AWS::CloudFormation::Stack
+    #DeletionPolicy: !Ref DeletionPolicy #TODO: https://forums.aws.amazon.com/post!post.jspa?forumID=92&threadID=152800&messageID=859017&reply=true
+    DependsOn: AuroraVPCSecurityGroup
+    Properties:
+      TemplateURL: !Sub 
+        - https://s3.${AWS::Region}.amazonaws.com/${NestedStacksS3Bucket}/nested-stacks/${url}
+        - { url: !FindInMap [NestedStacks, infrastructure, aurora] }
+      Parameters:
+        DatabaseSecurityGroupId: !Ref AuroraVPCSecurityGroup
+        DatabaseSubnets: !GetAtt VPC.Outputs.PrivateSubnets
+        DatabaseName: !Sub 
+            - ${Stage}--${DbName}
+            - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ]}  
+        DatabaseUser: !Ref DbUsername
+        DatabasePassword: !Ref DbPassword
+        DatabaseEngine: 'aurora'
+        EncryptionAtRest: 'true'
+        DatabaseInstanceClass: !Ref DbInstanceClass
+        DatabaseAlarmMaxCpuPercent: !Ref DbAlarmMaxCpuPercent
+        DatabaseAlarmReadLatencyMaxSeconds: !Ref DbAlarmReadLatencyMaxSeconds
+        DatabaseAlarmWriteLatencyMaxSeconds: !Ref DbAlarmWriteLatencyMaxSeconds
+        DatabaseAlarmEvaluationPeriods: !Ref DbAlarmEvaluationPeriods
+        DatabaseAlarmEvaluationPeriodSeconds: !Ref DbAlarmEvaluationPeriodSeconds
+        EnhancedMonitoring: !Ref DbEnhancedMonitoring
+        DatabaseAlarmSwapUsageInBytes: !Ref DbAlarmSwapUsageInBytes
+        EnableAlarms: !Ref DbEnableAlarms
+        Stage: !Sub 
+          - ${Stage}
+          - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ] }
+####End Aurora
+
+Outputs:
+  Version:
+    Description: CF-APIG-Single-Lambda template version
+    Value: 1.0.0
+
+  CloudFront:
+    Description: CloudFront ID
+    Value: !GetAtt CloudFront.Outputs.CloudFront
+  CNAME:
+    Description: Custom domain for Cloudfront
+    Value: !GetAtt CloudFront.Outputs.CNAME
+
+  APIGID:
+    Description: APIG root resource ID
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGID
+  APIGURL:
+    Description: APIG stage URL
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGURL
+  APIGLambdaInvocationArn:
+    Description: ARN of lambda that will be called from APIG
+    Value: !GetAtt ApiGatewayLambdaProxy.Outputs.APIGLambdaInvocationArn  
+
+  LambdaExecutionRoleArn:
+    Description: Lambda execution role
+    Value: !Sub arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}
+
+  FullLambdaName:
+    Description: Full lambda name
+    Value: !Sub
+      - ${Repo}--${Branch}--${LambdaName}
+      - { LambdaName: !Ref LambdaName, Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ] }          
+
+  RunSsmSetLambdaExecutionRoleCmd:
+    Description: SSM command to setup lambda execution role.  Staging will use the prod value of this key
+    Value: !Sub 
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaExecutionRoleArn' --type 'String' --value 'arn:aws:iam::${AWS::AccountId}:role/${LambdaExecutionRole}'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
+  
+  RunSsmSetXFromCdnEnvVarCmd:
+    Description: SSM command to set X_FROM_CDN env var
+    Value: !Sub 
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}
+
+  RunSsmSetLambdaMemory:
+    Description: SSM command to define lambda memory
+    Value: !Sub 
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaMemory' --type 'String' --value 'yourMemoryHere'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+
+  RunSsmSetLambdaTimeoutKey:
+    Description: SSM command to define lambda timeout
+    Value: !Sub 
+      - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaTimeout' --type 'String' --value 'yourTimeoutHere'
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+
+  SSMEnvVarsPath:
+    Description: SSM prefix where env vars should be defined
+    Value: !Sub 
+      - /${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs
+      - { Stage: !Select [ "0", !Split [ '--', !Ref 'AWS::StackName' ] ], Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+
+  #staging output
+  CloudFrontStaging:
+    Description: Staging CloudFront ID
+    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CloudFront, NA]
+  CNAMEStaging:
+    Description: Staging Custom domain for Cloudfront
+    Value: !If [CreateStagingResources, !GetAtt CloudFrontStaging.Outputs.CNAME, NA]
+
+  APIGIDStaging:
+    Description: APIG root resource ID
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGID, NA]
+  APIGURLStaging:
+    Description: APIG stage URL
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGURL, NA]
+  APIGLambdaInvocationArnStaging:
+    Description: ARN of lambda that will be called from APIG
+    Value: !If [CreateStagingResources, !GetAtt ApiGatewayLambdaProxyStaging.Outputs.APIGLambdaInvocationArn, NA]
+
+  RunSsmSetLambdaMemoryStaging:
+    Description: SSM command to define lambda memory
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub 
+        - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaMemory' --type 'String' --value 'yourMemoryHere'
+        - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}          
+      - NA        
+
+  RunSsmSetLambdaTimeoutKeyStaging:
+    Description: SSM command to define lambda timeout
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub 
+        - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaTimeout' --type 'String' --value 'yourTimeoutHere'
+        - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}    
+      - NA
+
+  SSMEnvVarsPathStaging:
+    Description: staging SSM prefix where env vars should be defined
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub 
+        - /staging/${Repo}/${Branch}/${LambdaName}/lambdaEnvs
+        - { Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}                
+      - NA
+
+  RunSsmSetXFromCdnEnvVarCmdStaging:
+    Description: SSM command to set X_FROM_CDN env var for staging
+    Value: !If 
+      - CreateStagingResources
+      - 
+        !Sub
+        - aws ssm put-parameter --overwrite --name '/${Stage}/${Repo}/${Branch}/${LambdaName}/lambdaEnvs/X_FROM_CDN' --type 'String' --value '${VerifyFromCfHeaderVal}'
+        - { Stage: 'staging', Repo: !Select [ "1", !Split [ '--', !Ref 'AWS::StackName' ] ], Branch: !Select [ "2", !Split [ '--', !Ref 'AWS::StackName' ] ]}      
+      - NA        
+  #end staging output         
