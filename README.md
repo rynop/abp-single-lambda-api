@@ -21,13 +21,14 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
     This:
     *  Downloads the branch of of your favorite programming language, and common [aws](./aws) dir out of `master` branch.  
     *  Sets `NestedStacksS3Bucket` and s3 versions of your `nested-stacks` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
-1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
+1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ImageManip--r`:
     *  Create a stack for your `test` and `prod` stages.  You will have 2 root stacks.  The `prod` stack takes care of both `prod` and `staging` resources.
     *  The `Outputs` tab in the CloudFormation UI for each root stack has commands you will run in the next steps.  Outputs that start with `Run*` you should run from your CLI.
 1. Some of the Lambda configuration is stored in [Systems manager parameter store](https://console.aws.amazon.com/systems-manager/parameters) with the convention based prefix `/<stage>/<repoName>/<branch>/<lambdaName>/`.  Ex: `aws ssm put-parameter --name "/prod/abp-single-lambda-api/master/ResizeImage/lambdaExecutionRoleArn" --type "String" --value 'arn:aws:iam::accountId:role/roleName'`.  These keys are required **per** stage:
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaExecutionRoleArn` (don't create for `staging` stage.  `staging` uses the `prod` `lambdaExecutionRoleArn`).  The output of the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) contains a `SsmSetLambdaExecutionRoleCmd` value that is an aws CLI command that sets this for you.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaTimeout`
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaMemory`
+    * `/<stage>/<repoName>/<branch>/<lambdaName>/vpcConfig`. Optional. If your lambda needs to be in vpc, value should be like `SubnetIds=string,string,SecurityGroupIds=string,string`. See [AWS CLI docs](https://docs.aws.amazon.com/cli/latest/reference/lambda/update-function-configuration.html) for more info.
 1.  Setup env vars **per** stage.  All keys in the `lambdaEnvs` namespace are automatically added your your lambda's env.  They can optionally be encrypted in systems manager param store, we handle all the decoding complexity (if you use the default KMS key).  You can use [this script](https://github.com/rynop/aws-blueprint/blob/master/bin/lambda-ssm-env-var-helper.sh) help set them.
     * `/<stage>/<repoName>/<branch>/<lambdaName>/lambdaEnvs/<env var name>`.  Ex: `/prod/abp-single-lambda-api/master/ResizeImage/lambdaEnvs/MY_VAR`    
     * Run the `SsmSetXFromCdnEnvVarCmd` output value from the [Resources CloudFormation stack](./aws/cloudformation/cf-apig-single-lambda-resources.yaml).  It sets `X_FROM_CDN` (used by the example code in this repo).
@@ -39,6 +40,12 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
 1. The domain your app can be reached, is located in the `Outputs` tab of the resources CloudFormation stack at key `CNAME`.
 1. Edit your cloudfront > dist settings > change Security policy to `TLSv1.1_2016`.  CloudFormation does not support this parameter yet.
 1. Create a DNS entry in route53 for production that consumers will use.  The cloud formation creates one for `prod--` but you do not want to use this as the CloudFormation can be deleted.
+
+# Lambda with no web API
+
+Want a lambda that does not need a web API (that is invoked by something like sns)?  Follow the steps above, but instead of using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` for your resources CloudFormation, use `aws/cloudformation/no-web-api-single-lambda-resources.yaml`.  You will use the same [codebuild](./codebuild) files and same CI/CD.
+
+Astute developers may notice an APIG line in [aws/codebuild/lambda-publish](./aws/codebuild/lambda-publish.yaml), however this has no impact and will not fail the build.
 
 ## Backup info (if you care about inner workings)
 
@@ -57,9 +64,3 @@ The publishing process is multi-stage, with manual approvals, all handled in an 
     1.  Update lambda using `${codeSha256}.zip`. Set env vars from [ssm](https://console.aws.amazon.com/systems-manager/parameters) namespace `/prod/[repo]/[branch]/[LAMBDA_NAME]/lambdaEnvs`, role from `/prod/[repo]/[branch]/[LAMBDA_NAME]/lambdaExecutionRoleArn`, timeout from `/staging/[repo]/[branch]/[LAMBDA_NAME]/lambdaTimeout`, memory from `/prod/[repo]/[branch]/[LAMBDA_NAME]/lambdaMemory`.  
     1.  Create Lambda version & alias `prod` 
 
-
-# Lambda with no web API
-
-Want a lambda that does not need a web API (that is invoked by something like sns)?  Follow the steps above, but instead of using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` for your resources CloudFormation, use `aws/cloudformation/no-web-api-single-lambda-resources.yaml`.  You will use the same [codebuild](./codebuild) files and same CI/CD.
-
-Astute developers may notice an APIG line in [aws/codebuild/lambda-publish](./aws/codebuild/lambda-publish.yaml), however this has no impact and will not fail the build.

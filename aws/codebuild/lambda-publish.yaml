@@ -15,8 +15,7 @@ phases:
   install:
     commands:      
       - env
-      - apt-get update -y && apt-get install -y jq python3-dev
-      - pip install --upgrade awscli
+      - apt-get update -y && apt-get install -y jq
   pre_build:
     commands: 
       # Get lambda runtime config from AWS Systems Manager Parameter Store.  If staging, use prod ARN
@@ -39,6 +38,8 @@ phases:
       # Get env vars from AWS Systems Manager Parameter Store, transform into env format for Lambda
       - lambdaEnv=`aws ssm get-parameters-by-path --with-decryption --recursive --path ${stageRepoBranchEyecatcherSsmPrefix}/lambdaEnvs | jq --compact-output '.Parameters | map( {(.Name):.Value} ) | add | if . == null then {"Variables":{}} else {"Variables":.} end | .Variables.APP_STAGE="'$STAGE'" | .Variables.GIT_BRANCH="'$BRANCH'"' | sed "s|${stageRepoBranchEyecatcherSsmPrefix}/lambdaEnvs/||g"`      
       - updateConfigJson=`aws lambda update-function-configuration --function-name ${FULL_LAMBDA_NAME} --role ${LAMBDA_EXECUTION_ROLE_ARN} --handler ${HANDLER} --description "${LAMBDA_DESC}" --timeout ${LAMBDA_TIMEOUT} --memory-size ${LAMBDA_MEMORY} --environment "${lambdaEnv}" --runtime ${LAMBDA_RUNTIME}`
+      - VPC_CONFIG=`aws ssm get-parameter --with-decryption --name /${arnStage}/${REPO}/${BRANCH}/${LAMBDA_NAME}/vpcConfig | jq -r '.Parameter.Value'`
+      - if [ -n "$VPC_CONFIG" ]; then echo "Setting VPC Config $vpcConfig"; updateConfigJson=`aws lambda update-function-configuration --function-name ${FULL_LAMBDA_NAME} --vpc-config ${VPC_CONFIG}` ; fi
       - echo "Lambda Config \n$lambdaConfigJson"
       - revisionId=`echo $updateConfigJson | jq -r '.RevisionId'`
       - echo "RevisionId ${revisionId}"

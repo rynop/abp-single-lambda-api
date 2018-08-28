@@ -1,0 +1,27 @@
+
+
+version: 0.2
+
+env:
+  variables:
+    PKG_ZIP_NAME: "pkg.zip"
+
+phases:
+  install:
+    commands:
+      - env
+      - which java
+      - java -version
+      - which mvn
+      - mvn --version
+      - which aws
+      - aws --version
+  build:
+    commands:
+      - zip -q -r ${PKG_ZIP_NAME} src
+  post_build:
+    commands:
+      - pkgS3path="${S3_DIR_PATH_FOR_ZIPS}/${PKG_ZIP_NAME}"
+      - which aws
+      - aws --version
+      - aws s3 --region "${AWS_REGION}" cp ${PKG_ZIP_NAME} "${pkgS3path}"
