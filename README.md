@@ -21,7 +21,7 @@ This example sets up a CI/CD for a single lambda, fronted by CloudFront and API 
     This:
     *  Downloads the branch of of your favorite programming language, and common [aws](./aws) dir out of `master` branch.  
     *  Sets `NestedStacksS3Bucket` and s3 versions of your `nested-stacks` in your [resources CloudFormation](./aws/cloudformation/cf-apig-single-lambda-resources.yaml) file.
-1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ResizeImage--r`:
+1. Create your "resources" (CloudFront, API Gateway etc) stacks using `aws/cloudformation/cf-apig-single-lambda-resources.yaml` in your repo. Stack naming convention is `[stage]--[repo]--[branch]--[eyecatcher]--r`. Ex: `prod--abp-single-lambda-api--master--ImageManip--r`:
     *  Create a stack for your `test` and `prod` stages.  You will have 2 root stacks.  The `prod` stack takes care of both `prod` and `staging` resources.
     *  The `Outputs` tab in the CloudFormation UI for each root stack has commands you will run in the next steps.  Outputs that start with `Run*` you should run from your CLI.
 1. Some of the Lambda configuration is stored in [Systems manager parameter store](https://console.aws.amazon.com/systems-manager/parameters) with the convention based prefix `/<stage>/<repoName>/<branch>/<lambdaName>/`.  Ex: `aws ssm put-parameter --name "/prod/abp-single-lambda-api/master/ResizeImage/lambdaExecutionRoleArn" --type "String" --value 'arn:aws:iam::accountId:role/roleName'`.  These keys are required **per** stage:
