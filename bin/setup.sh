@@ -33,7 +33,7 @@ done
 repoPath=$(basename `git rev-parse --show-toplevel 2>/dev/null` 2>/dev/null)
 while [[ -z "$githubRepoName" ]]; do
     read -p "Github repo name (dont include org) [${repoPath}]: " githubRepoName
-    githubRepoName=${nestedStacksS3BucketRegion:-$repoPath}
+    githubRepoName=${githubRepoName:-$repoPath}
 done
 
 while [[ -z "$gitBranch" ]]; do
@@ -47,7 +47,8 @@ read -p "aws cli profile [default]: " awsCliProfile
 awsCliProfile=${awsCliProfile:-default}
 
 while [[ -z "$lambdaName" ]]; do
-    read -p "Lambda name: " lambdaName
+    read -p "Lambda name (to be created) [${repoPath}]: " lambdaName
+    lambdaName=${lambdaName:-$repoPath}
 done
 
 read -p "Lambda timeout (3-300) [3]: " lambdaTimeout
