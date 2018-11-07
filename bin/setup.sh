@@ -95,13 +95,13 @@ cat <<TheMsg
 
 Now run the following:
 
-aws ssm put-parameter --name '/test/$githubRepoName/$gitBranch/$lambdaName/lambdaTimeout' --type 'String' --value '$lambdaTimeout'
-aws ssm put-parameter --name '/staging/$githubRepoName/$gitBranch/$lambdaName/lambdaTimeout' --type 'String' --value '$lambdaTimeout'
-aws ssm put-parameter --name '/prod/$githubRepoName/$gitBranch/$lambdaName/lambdaTimeout' --type 'String' --value '$lambdaTimeout'
+aws ssm put-parameter ${awsCliParams} --name '/test/$githubRepoName/$gitBranch/$lambdaName/lambdaTimeout' --type 'String' --value '$lambdaTimeout'
+aws ssm put-parameter ${awsCliParams} --name '/staging/$githubRepoName/$gitBranch/$lambdaName/lambdaTimeout' --type 'String' --value '$lambdaTimeout'
+aws ssm put-parameter ${awsCliParams} --name '/prod/$githubRepoName/$gitBranch/$lambdaName/lambdaTimeout' --type 'String' --value '$lambdaTimeout'
 
-aws ssm put-parameter --name '/test/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
-aws ssm put-parameter --name '/staging/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
-aws ssm put-parameter --name '/prod/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
+aws ssm put-parameter ${awsCliParams} --name '/test/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
+aws ssm put-parameter ${awsCliParams} --name '/staging/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
+aws ssm put-parameter ${awsCliParams} --name '/prod/$githubRepoName/$gitBranch/$lambdaName/lambdaMemory' --type 'String' --value '$lambdaMemory'
 
 Create resources CloudFormation stacks with the names:
 
