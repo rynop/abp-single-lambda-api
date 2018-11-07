@@ -2,15 +2,15 @@
 
 [aws-blueprint](https://github.com/rynop/aws-blueprint) example for an API backed by a single lambda, using **golang**
 
-## Setup
-
-Follow [setup steps](https://github.com/rynop/abp-single-lambda-api#setup) that are common across all languages.  You can see a complete working example at [validate-abp-single-lambda-api](https://github.com/rynop/validate-abp-single-lambda-api)
-
 ### CI/CD CloudFormation Parameters:
 
 *  `TestBuildPackageSpecPath`: `aws/codebuild/go-test-package.yaml`
 *  `LambdaPublishBuildSpecPath`: `aws/codebuild/lambda-publish.yaml`
 *  `HandlerPath`: `cmd/apighandler/main`
+
+## Setup
+
+Follow [setup steps](https://github.com/rynop/abp-single-lambda-api#setup) that are common across all languages.  You can see a complete working example at [validate-abp-single-lambda-api](https://github.com/rynop/validate-abp-single-lambda-api)
 
 Project layout is based on [golang-standards/project-layout](https://github.com/golang-standards/project-layout)
 
