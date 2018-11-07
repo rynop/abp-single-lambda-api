@@ -36,10 +36,8 @@ while [[ -z "$githubRepoName" ]]; do
     githubRepoName=${githubRepoName:-$repoPath}
 done
 
-while [[ -z "$gitBranch" ]]; do
-    read -p "Git branch CI/CD will monitor [master]: " gitBranch
-    gitBranch=${gitBranch:-master}
-done
+read -p "Git branch CI/CD will monitor [master]: " gitBranch
+gitBranch=${gitBranch:-master}
 
 read -p "S3 nested-stacks bucket region [us-east-1]: " nestedStacksS3BucketRegion
 nestedStacksS3BucketRegion=${nestedStacksS3BucketRegion:-us-east-1}
