@@ -39,6 +39,10 @@ Same project layout layout, `retool` and `dep` steps as above.
 1.  Install plugins locally:
     1.  `retool add github.com/golang/protobuf/protoc-gen-go origin/master`
     1.  `retool add github.com/twitchtv/twirp/protoc-gen-twirp origin/v6_prerelease`
+1.  Add dependencies:
+    ```
+    retool do dep ensure -add github.com/apex/gateway github.com/aws/aws-lambda-go    
+    ```
 1.  Auto-generate the code:
 ```
 retool do protoc --proto_path=$GOPATH/src:. --twirp_out=. --go_out=. ./rpc/publicservices/service.proto 
