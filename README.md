@@ -36,6 +36,7 @@ Want to use a [Twirp RPC framework](https://github.com/twitchtv/twirp) based lam
 
 Same project layout layout, `retool` and `dep` steps as above.
 
+1.  Install [protoc](https://github.com/golang/protobuf), the protobuf compiler. You need version 3+.
 1.  Install plugins locally:
     1.  `retool add github.com/golang/protobuf/protoc-gen-go origin/master`
     1.  `retool add github.com/twitchtv/twirp/protoc-gen-twirp origin/v6_prerelease`
