@@ -52,6 +52,6 @@ retool do protoc --proto_path=$GOPATH/src:. --twirp_out=. --go_out=. ./rpc/admin
 1. Example to consume twirp API in this example: `curl -H 'Content-Type:application/json' -H 'Authorization: Bearer aaa' -H 'X-FROM-CDN: <your VerifyFromCfHeaderVal>' -d '{"term":"wahooo"}' https://<--r output CNAME>/com.rynop.twirpl.publicservices.Image/CreateGiphy`
 
 Testing locally:
-1.  Set `LOCAL_LISTEN_PORT` and `X_FROM_CDN` env vars. (Fish: `set -gx LOCAL_LISTEN_PORT 8080`, `set -gx X_FROM_CDN localTest`)
-1.  Build & run: `cd cmd/apighandlertwirp`, `go build -o /tmp/main .; /tmp/main`
+1.  Set `LOCAL_LISTEN_PORT` and `X_FROM_CDN` env vars. (Fish: `set -gx LOCAL_LISTEN_PORT 8080; set -gx X_FROM_CDN localTest`)
+1.  Build & run: `cd cmd/apighandlertwirp; go run main.go`
 1.  Hit endpoint: `curl -v -H 'Content-Type:application/json' -H 'Authorization: Bearer aaa' -H 'X-FROM-CDN: localTest' -d '{"term":"wahooo"}' http://localhost:8080/com.rynop.twirpl.publicservices.Image/CreateGiphy`
