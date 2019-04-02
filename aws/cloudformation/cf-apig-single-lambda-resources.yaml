@@ -19,11 +19,11 @@ Parameters:
   CloudFrontCname:
     Description: Custom domain name to use (foo.yourdomain.com).  Will prefix this with stageName--
     Type: String
-    Default: blah.yourdomain.com
+    Default: api.yourdomain.com
     MaxLength: 253
     MinLength: 5
     AllowedPattern: "^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\\.){2}[a-zA-Z]{2,63}$"
-    ConstraintDescription: must be a FQDN with 3 parts, ex. foo.yourdomain.com 
+    ConstraintDescription: must be a FQDN with 3 parts, ex. api.yourdomain.com 
 
   VerifyFromCfHeaderVal:
     Description: A custom header X-From-CDN with val below be passed to your orgin, to verify request came 
