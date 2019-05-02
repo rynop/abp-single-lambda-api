@@ -14,7 +14,7 @@ Follow [setup steps](https://github.com/rynop/abp-single-lambda-api#setup) that 
 
 Project layout is based on [golang-standards/project-layout](https://github.com/golang-standards/project-layout)
 
-We recommend using [retool](https://github.com/twitchtv/retool) to manage your tools (like (dep)[https://github.com/golang/dep]).  Why?  If you work with anyone else on your project, and they have different versions of their tools, everything turns to shit.
+We recommend using [retool](https://github.com/twitchtv/retool) to manage your tools, including (dep)[https://github.com/golang/dep].  Why?  If you work with anyone else on your project, and they have different versions of their tools, everything turns to shit.
 
 1. [Install retool](https://github.com/twitchtv/retool#usage): `go get github.com/twitchtv/retool`. Make sure to add `$GOPATH/bin` to your PATH
 1. Update the code to use your go package, by doing an extended find and replace of all occurances of `rynop/abp-single-lambda-api` with your golang package namespace.
