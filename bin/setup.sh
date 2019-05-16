@@ -18,6 +18,9 @@ chkreqs() {
 
     sed -v 2>&1 | grep -i "gnu sed" >/dev/null
     test $? -ne 0 && abort "GNU sed required to run this quickstart script. See https://github.com/rynop/aws-blueprint#gnu-tools"
+
+    bsdtar --version 2>&1 | grep -i "^bsdtar" > /dev/null
+    test $? -ne 0 && abort "bsdtar required"
 }
 
 chkreqs
